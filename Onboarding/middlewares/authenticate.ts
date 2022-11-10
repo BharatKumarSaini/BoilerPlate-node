@@ -1,7 +1,14 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from "express";
 import { JwtPayload } from 'jsonwebtoken';
-
+// declare namespace Express {
+//     export interface Request {
+//         user?: {
+//             id: string,
+//             name: string,
+//        }
+//     }
+//  }
 
 
 let authenticate = (request : Request , response : Response , next : NextFunction) => {

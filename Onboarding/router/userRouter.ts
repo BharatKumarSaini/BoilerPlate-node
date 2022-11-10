@@ -4,9 +4,10 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
+import sendEmail from "../utils/email";
 
 import { Request, Response } from 'express';
+import authenticate from '../middlewares/authenticate';
 
 
 /*
@@ -45,7 +46,24 @@ router.post('/register', [
         // save user to db
         user = new User({name , email , passwordHash });
         await user.save();
-        response.status(200).json({msg : 'Registration is Success'});
+        let payload = {
+            user: {
+                id: user.id,
+                name: user.name,
+            }
+        };
+        if (process.env.JWT_SECRET_KEY) {
+            jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: "7d" }, async (err, token) => {
+                if (token) {
+                    const link = `process.env.BASE_URL/api/users/verify?x-auth-token=${token}`;
+                    await sendEmail(email, "Verify Email", link, 'emailVerification.ejs.html');
+                }
+                else {
+                    throw err;
+                }
+            })
+        }
+        response.status(200).json({msg : 'Registration is Successful and Verification Email Send'});
     }
     catch (error) {
         console.error(error);
@@ -85,11 +103,11 @@ router.post('/login' , [
             let payload = {
                 user: {
                     id: user.id,
-                    name: user.name as string
+                    name: user.name,
                 }
             };
             if (process.env.JWT_SECRET_KEY) {
-                jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: 360000000 }, (err, token) => {
+                jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: "7d" }, (err, token) => {
                     if (err) throw err;
                     response.status(200).json({
                         msg: 'Login is Success',
@@ -110,27 +128,23 @@ router.post('/login' , [
     @usage : Verify the Email
     @url : /api/users/verify
     @fields : link
-    @method : POST
+    @method : get
     @access : PUBLIC
  */
 
-    router.post("/verify/:id/:token", async (req, res) => {
+    router.get("/verify", authenticate, async (request, response) => {
         try {
-          const user = await User.findOne({ _id: req.params.id });
-          if (!user) return res.status(400).send("Invalid link");
+            let user = await User.findById(request.user.id);
+            if (!user) return response.status(400).send("Invalid link");
+            user.verified = true;
+            await user.save()
+            response.status(200).json({
+                msg: 'Email Verified',
+                User: user
+            });
       
-          const token = await Token.findOne({
-            userId: user._id,
-            token: req.params.token,
-          });
-          if (!token) return res.status(400).send("Invalid link");
-      
-          await User.updateOne({ _id: user._id, verified: true });
-          await Token.findByIdAndRemove(token._id);
-      
-          res.send("email verified sucessfully");
         } catch (error) {
-          res.status(400).send("An error occured");
+            response.status(400).send("An error occured");
         }
       });
 

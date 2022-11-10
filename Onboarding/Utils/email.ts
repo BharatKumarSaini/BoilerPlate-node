@@ -3,20 +3,18 @@ import ejs from 'ejs'
 import fs from 'fs'
 import path from 'path'
 
-const sendEmail = async (email : string, subject : string, text : string) => {
+const sendEmail = async (email : string, subject : string, text : string, HTMLtemplate : string) => {
   try {
-    if (process.env.BASE_URL) {
-      const Link = process.env.BASE_URL
-      const templatePath = path.resolve('template', 'emailVerification.ejs.html')
+      const templatePath = path.resolve('template', HTMLtemplate)
       const template = fs.readFileSync(templatePath, { encoding: 'utf8' })
-      const html = ejs.render(template, { Link: Link })
+      const html = ejs.render(template, { Link: text })
   
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         secure: true,
         auth: {
-          user: process.env.USER,
-          pass: process.env.PASS,
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
         },
       });
 
@@ -24,11 +22,10 @@ const sendEmail = async (email : string, subject : string, text : string) => {
         from: process.env.USER,
         to: email,
         subject: subject,
-        text: text,
-        html,
+        text: html,
       });
       console.log("email sent sucessfully");
-    }
+    
   } catch (error) {
     console.log("email not sent");
     console.log(error);
