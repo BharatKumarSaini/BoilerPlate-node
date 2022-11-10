@@ -1,8 +1,10 @@
-const express = require('express');
+import express from 'express';
 const app = express();
-const cors = require('cors');
-const dotEnv = require('dotenv');
-const mongoose = require('mongoose');
+import cors from 'cors';
+import dotEnv from 'dotenv';
+import mongoose from 'mongoose';
+
+import {Request , Response} from 'express'
 
 // configure cors
 app.use(cors());
@@ -11,25 +13,30 @@ app.use(cors());
 app.use(express.json());
 
 // configure dotEnv
-dotEnv.config({path : './.env'});
-
-const port = process.env.PORT || 5000;
-
+dotEnv.config({ path: './.env' });
+let port: number = 5000;
+if (process.env.PORT) {
+    port = +process.env.PORT;
+}
 // configure mongodb connection
-mongoose.connect(process.env.MONGO_DB_CLOUD_URL, {
-    useUnifiedTopology :true,
-    useNewUrlParser : true,
-    useFindAndModify : false,
-    useCreateIndex : true
-}).then((_response) => {
-    console.log('Connected to MongoDB Cloud Successfully......');
-}).catch((error : Error) => {
-    console.error(error);
-    process.exit(1);
-});
+if (process.env.MONGO_DB_CLOUD_URL) {
+    mongoose.connect(process.env.MONGO_DB_CLOUD_URL, {
+        useUnifiedTopology: true,
+        useNewUrlParser: true,
+        useFindAndModify: false,
+        useCreateIndex: true
+    }).then(() => {
+        console.log('Connected to MongoDB Cloud Successfully......');
+    }).catch((error: Error) => {
+        console.error(error);
+        process.exit(1);
+    });
+}
 
 // simple request
-app.get('/', (_request , response) => {
+app.get('/', (request: Request, response: Response) => {
+    console.log(request);
+    
     response.send(`<h2>Welcome to User Onboarding BoilerPlate </h2>`);
 });
 

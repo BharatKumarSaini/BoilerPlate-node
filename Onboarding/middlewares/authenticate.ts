@@ -1,6 +1,10 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from "express";
+import { JwtPayload } from 'jsonwebtoken';
 
-let authenticate = (request , response , next) => {
+
+
+let authenticate = (request : Request , response : Response , next : NextFunction) => {
     // get token from header
     const token = request.header('x-auth-token');
     if(!token){
@@ -9,12 +13,16 @@ let authenticate = (request , response , next) => {
 
     // verify the token
     try {
-        let decoded = jwt.verify(token , process.env.JWT_SECRET_KEY);
-        request.user = decoded.user;
-        next();
+        if (process.env.JWT_SECRET_KEY) {
+           
+                let decoded = jwt.verify(token, process.env.JWT_SECRET_KEY) as JwtPayload;
+                request.user = decoded.user;
+                next();
+        }
     }
     catch (error) {
         response.status(401).json({msg : 'Token is not valid'});
     }
 };
-module.exports = authenticate;
+
+export default authenticate
