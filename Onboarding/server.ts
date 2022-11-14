@@ -1,10 +1,11 @@
 import express from 'express';
-const app = express();
+
 import cors from 'cors';
 import dotEnv from 'dotenv';
 import mongoose from 'mongoose';
 
-import {Request , Response} from 'express'
+import { Request, Response } from 'express'
+const app = express();
 
 // configure cors
 app.use(cors());
@@ -41,7 +42,7 @@ app.get('/', (request: Request, response: Response) => {
 });
 
 // router configuration
-app.use('/api/users' , require('./router/userRouter'));
+// app.use('/api/users' , require('./router/userRouter'));
 
 app.listen(port, () => {
     console.log(`Express Server is started at PORT : ${port}`);
