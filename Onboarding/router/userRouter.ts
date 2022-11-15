@@ -199,19 +199,16 @@ router.post('/login' , [
             }
 
             if (socialData.type === 'Facebook') {
-            const checkFacebookUser = await axios.get(`https://graph.facebook.com/me?access_token=${socialData.accessToken}`)
-            if (checkFacebookUser) {
-                const facbookUser = checkFacebookUser.data
-                return response.send({ success: true, message: 'login sucessfully', facbookUser })
-            }
-            return response.status(400).send({ erro: true, message: 'user not verify' })
-            }
-            if (socialData.type === 'Twitter') {
-            return response.send({ success: true, message: 'login sucessfully' })
+                const checkFacebookUser = await axios.get(`https://graph.facebook.com/me?access_token=${socialData.accessToken}`)
+                if (checkFacebookUser) {
+                    const facbookUser = checkFacebookUser.data
+                    return response.send({ success: true, message: 'login sucessfully', facbookUser })
+                }
+                return response.status(400).send({ erro: true, message: 'user not verify' })
             }
             return response.status(400).send({ erro: true, message: 'type is not defined' })
-        } catch (e: any) {
-            return response.status(500).send({ errorMessage: e.message })
+        } catch (error) {
+            return response.status(500).send({ errorMessage: error.message })
         }   
     });
 
