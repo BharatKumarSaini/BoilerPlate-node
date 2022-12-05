@@ -1,14 +1,13 @@
 import express from 'express';
-import axios from 'axios'
 const router = express.Router();
 import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import sendEmail from "../utils/email";
-import {OAuth2Client} from 'google-auth-library'
 import { Request, Response } from 'express';
-import authenticate from '../middlewares/authenticate';
+import userVerify from '../middlewares/userVerify';
+import jwt_decode from "jwt-decode";
 
 
 /*
@@ -134,7 +133,7 @@ router.post('/login' , [
     @access : PUBLIC
  */
 
-    router.get("/verify", authenticate, async (request, response) => {
+    router.get("/verify", userVerify, async (request, response) => {
         try {
             const user = await User.findById(request.user.id) as any;
             if (!user) return response.status(400).send("Invalid link");
@@ -151,65 +150,203 @@ router.post('/login' , [
     });
       
 
-    /*
-    @usage : Social Login
-    @url : /api/users/socialAuth
-    @fields : type, access token
-    @method : post
-    @access : PUBLIC
- */
-
-
-    router.post("/socialAuth",async (request, response) => {
-        try {
-            const socialData = request.body
-            if (socialData.type === 'Google') {
-                const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-                const client = new OAuth2Client(CLIENT_ID)
-                const ticket = await client.verifyIdToken({
-                    idToken: socialData.accessToken,
-                    audience: CLIENT_ID, // Specify the CLIENT_ID of the app that accesses the backend
-                    // Or, if multiple clients access the backend:
-                    //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3]
-                })
-                const Data = ticket.getPayload()
-                const name = Data?.name;
-                const email = Data?.email;
-
-                const Socialuser = new User({ name, email }) as any;
-                await Socialuser.save();
-                let payload = {
-                    user: {
-                        id: Socialuser.id,
-                        name: Socialuser.name,
-                    }
+    router.post(
+        "/registerSocial",
+      
+        async (request, response) => {
+          let errors = validationResult(request);
+      
+          if (request.body.googleAccessToken) {
+            try {
+              const { googleAccessToken } = request.body;
+              var decoded = jwt_decode(googleAccessToken) as { name : string, email : string};
+              const user = await User.findOne({ email: decoded.email });
+              if (!user) {
+                const userr = new User({
+                  name: decoded.name,
+                  email: decoded.email,
+                  verified: true,
+                });
+                await userr.save();
+                // save user to db
+                const payload = {
+                  user: {
+                    id: userr._id,
+                    name: userr.name,
+                  },
                 };
                 if (process.env.JWT_SECRET_KEY) {
-                    jwt.sign(payload, process.env.JWT_SECRET_KEY, { expiresIn: "7d" }, async (err, token) => {
-                        if (token) {
-                            const link = `process.env.BASE_URL/api/users/verify?x-auth-token=${token}`;
-                            await sendEmail(email, "Verify Email", link, 'emailVerification.ejs.html');
-                        }
-                        else {
-                            throw err;
-                        }
-                    })
+                  jwt.sign(
+                    payload,
+                    process.env.JWT_SECRET_KEY,
+                    { expiresIn: "7d" },
+                    async (err, token) => {
+                      if (token) {
+                        const link = `${process.env.BASE_URL}/api/users/verify?token=${token}`;
+                        await sendEmail(
+                          decoded.email,
+                          `Welcome  ${userr.name}`,
+                          link,
+                          "emailVerification.ejs.html"
+                        );
+                        response.status(201).json({
+                          user: userr,
+                          token: token,
+                        });
+                      } else {
+                        throw err;
+                      }
+                    }
+                  );
                 }
-                response.status(200).json({ msg: 'Registration is Successful and Verification Email Send' });
-            }
-
-            if (socialData.type === 'Facebook') {
-                const checkFacebookUser = await axios.get(`https://graph.facebook.com/me?access_token=${socialData.accessToken}`)
-                if (checkFacebookUser) {
-                    const facbookUser = checkFacebookUser.data
-                    return response.send({ success: true, message: 'login sucessfully', facbookUser })
+              } else {
+                const payload = {
+                  user: {
+                    id: user._id,
+                    name: user.name,
+                  },
+                };
+                if (process.env.JWT_SECRET_KEY) {
+                  jwt.sign(
+                    payload,
+                    process.env.JWT_SECRET_KEY,
+                    { expiresIn: "7d" },
+                    async (err, token) => {
+                      if (token) {
+                        response.status(201).json({
+                          user: user,
+                          token: token,
+                        });
+                      } else {
+                        throw err;
+                      }
+                    }
+                  );
                 }
-                return response.status(400).send({ erro: true, message: 'user not verify' })
+              }
+            } catch (error) {
+              console.log(error);
             }
-            return response.status(400).send({ erro: true, message: 'type is not defined' })
+          } else if (request.body.githubAccess) {
+            try {
+              const { githubAccess } = request.body;
+              const user = await User.findOne({ email: githubAccess.email });
+              if (!user) {
+                const userr = new User({
+                  name: githubAccess.name,
+                  email: githubAccess.email,
+                  verified: true,
+                });
+                await userr.save();
+                // save user to db
+                const payload = {
+                  user: {
+                    id: userr._id,
+                    name: userr.name,
+                  },
+                };
+                if (process.env.JWT_SECRET_KEY) {
+                  jwt.sign(
+                    payload,
+                    process.env.JWT_SECRET_KEY,
+                    { expiresIn: "7d" },
+                    async (err, token) => {
+                      if (token) {
+                        const link = `${process.env.BASE_URL}/api/users/verify?token=${token}`;
+                        await sendEmail(
+                          userr.email,
+                          `Welcome  ${userr.name}`,
+                          link,
+                          "emailVerification.ejs.html"
+                        );
+                        response.status(201).json({
+                          user: userr,
+                          token: token,
+                        });
+                      } else {
+                        throw err;
+                      }
+                    }
+                  );
+                }
+              } else {
+                const payload = {
+                  user: {
+                    id: user._id,
+                    name: user.name,
+                  },
+                };
+                if (process.env.JWT_SECRET_KEY) {
+                  jwt.sign(
+                    payload,
+                    process.env.JWT_SECRET_KEY,
+                    { expiresIn: "7d" },
+                    async (err, token) => {
+                      if (token) {
+                        response.status(201).json({
+                          user: user,
+                          token: token,
+                        });
+                      } else {
+                        throw err;
+                      }
+                    }
+                  );
+                }
+              }
+            } catch (error) {
+              console.log(error);
+            }
+          } else {
+            if (!errors.isEmpty()) {
+              return response.status(400).json({ errors: errors.array() });
+            }
+      
+            try {
+              const { name, email, password } = request.body;
+      
+              // check if the user is exists
+              let user = await User.findOne({ email: email });
+              if (user) {
+                return response
+                  .status(400)
+                  .json({ errors: [{ msg: "User is Already Exists" }] });
+              } 
+            } catch (error) {
+              console.error(error);
+              response.status(500).json({ errors: [{ msg: error.message }] });
+            }
+          }
+        }
+      );
+      
+      /*
+          @usage : Login a User
+          @url : /api/users/login
+          @fields : email , password
+          @method : POST
+          @acce
+      /*
+          @usage : Verify the Email
+          @url : /api/users/verify
+          @fields : link
+          @method : get
+          @access : PUBLIC
+       */
+      
+      router.get("/verify", userVerify, async (request, response) => {
+        try {
+          const user = await User.findById(request.user.id);
+          if (!user) return response.status(400).send("Invalid link");
+          user.verified = true;
+          await user.save();
+          response.status(200).json({
+            msg: "Email Verified",
+            User: user,
+          });
         } catch (error) {
-            return response.status(500).send({ errorMessage: error.message })
-        }   
-    });
+          response.status(400).send("An error occured");
+        }
+      });
 
 module.exports = router;
