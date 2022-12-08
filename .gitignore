@@ -16,7 +16,7 @@ Onboarding/node_modules
 /build
 
 # misc
-.DS_Store
+*.DS_Store*
 .env.local
 .env
 .env.development.local
