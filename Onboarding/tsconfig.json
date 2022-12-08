@@ -1,12 +1,18 @@
 {
     "compilerOptions": {
+      "incremental": true,
+      "resolveJsonModule": true,
+      "outDir": "dist",
       "module": "commonjs",
       "esModuleInterop": true,
       "target": "es6",
       "moduleResolution": "node",
       "sourceMap": true,
-      "outDir": "js",
-      "typeRoots": ["./types", "./node_modules/@types"]
+      "typeRoots": ["./types", "./node_modules/@types"],
+      "noImplicitReturns": false,
+
+    /* Additional Checks */
+    "noUnusedLocals": true,
     },
     "lib": ["es2015"]
   }
