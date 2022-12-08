@@ -21,10 +21,7 @@ router.post('/register', [
     body('name').notEmpty().withMessage('Name is Required'),
     body('email').notEmpty().withMessage('Email is Required'),
     body('password').notEmpty().withMessage('Password is Required'),
-], async (request: Request, response: Response) => {
-    
-    
-
+    ], async (request: Request, response: Response) => {
     let errors = validationResult(request);
     if(!errors.isEmpty()){
         return response.status(401).json({errors : errors.array()})
@@ -155,7 +152,9 @@ router.post('/login' , [
       
         async (request, response) => {
           let errors = validationResult(request);
-      
+          if(!errors.isEmpty()){
+            return response.status(401).json({errors : errors.array()})
+        }
           if (request.body.googleAccessToken) {
             try {
               const { googleAccessToken } = request.body;
@@ -297,35 +296,9 @@ router.post('/login' , [
             } catch (error) {
               console.log(error);
             }
-          } else {
-            if (!errors.isEmpty()) {
-              return response.status(400).json({ errors: errors.array() });
-            }
-      
-            try {
-              const { name, email, password } = request.body;
-      
-              // check if the user is exists
-              let user = await User.findOne({ email: email });
-              if (user) {
-                return response
-                  .status(400)
-                  .json({ errors: [{ msg: "User is Already Exists" }] });
-              } 
-            } catch (error) {
-              console.error(error);
-              response.status(500).json({ errors: [{ msg: error.message }] });
-            }
           }
         }
       );
-      
-      /*
-          @usage : Login a User
-          @url : /api/users/login
-          @fields : email , password
-          @method : POST
-          @acce
       /*
           @usage : Verify the Email
           @url : /api/users/verify
